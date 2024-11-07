@@ -1,0 +1,6 @@
+/* Efecto hover para las filas de las agendas */
+.HoverEffect:hover {
+    background-color: #f1f1f1; 
+    transition: background-color 0.3s ease;
+    cursor: pointer; 
+}

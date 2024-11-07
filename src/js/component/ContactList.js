@@ -1,29 +1,41 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams } from 'react-router-dom';
 import { Context } from '../store/appContext';
-import { useParams } from "react-router-dom";
 import { Modal, Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import UpdateContact from './UpdateContact';
-import './ContactList.css'; 
+import './ContactList.css';
 
 const ContactList = () => {
     const { parametroSlug } = useParams();
     const { store, actions } = useContext(Context);
-    const [contactIdToUpdate, setContactIdToUpdate] = useState(null);
+    const [localContacts, setLocalContacts] = useState(store.contacts);
     const [contactToDelete, setContactToDelete] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [contactIdToUpdate, setContactIdToUpdate] = useState(null);
 
     useEffect(() => {
-        actions.loadContacts(parametroSlug);
-    }, [parametroSlug, actions]);
+        if (localContacts.length === 0) {
+            actions.loadContacts(parametroSlug).then(() => setLocalContacts(store.contacts));
+        }
+    }, [parametroSlug, store.contacts, actions, localContacts.length]);
 
-    const confirmDelete = async () => {
+    const handleDelete = async () => {
         if (contactToDelete) {
             await actions.deleteContact(parametroSlug, contactToDelete);
+            setLocalContacts(prevContacts => prevContacts.filter(c => c.id !== contactToDelete));
             setShowDeleteModal(false);
-            setContactToDelete(null);
         }
+    };
+
+    const handleUpdateContact = (updatedContact) => {
+        setLocalContacts(prevContacts => 
+            prevContacts.map(contact => 
+                contact.id === updatedContact.id ? updatedContact : contact
+            )
+        );
+        setShowUpdateModal(false);
     };
 
     return (
@@ -33,16 +45,13 @@ const ContactList = () => {
             </div>
             <h2 className="text-center mb-4">Lista de Contactos</h2>
             <div className="list-group">
-                {store.contacts?.map(contact => (
+                {localContacts.map(contact => (
                     <div key={contact.id} className="list-group-item contactItem d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 className="mb-1">{contact.name}</h5>
-                        </div>
+                        <h5 className="mb-1">{contact.name}</h5>
                         <div>
                             <Button variant="warning" size="sm" onClick={() => {
                                 setContactIdToUpdate(contact.id);
-                                setShowUpdateModal(false);
-                                setTimeout(() => setShowUpdateModal(true), 0);
+                                setShowUpdateModal(true);
                             }}>
                                 Actualizar
                             </Button>
@@ -63,17 +72,15 @@ const ContactList = () => {
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</Button>
-                    <Button variant="danger" onClick={confirmDelete}>Sí, eliminar</Button>
+                    <Button variant="danger" onClick={handleDelete}>Sí, eliminar</Button>
                 </Modal.Footer>
             </Modal>
 
             <UpdateContact
                 contactId={contactIdToUpdate}
                 showModal={showUpdateModal}
-                handleClose={() => {
-                    setShowUpdateModal(false);
-                    setContactIdToUpdate(null);
-                }}
+                handleClose={() => setShowUpdateModal(false)}
+                onUpdateContact={handleUpdateContact}  
             />
         </div>
     );
